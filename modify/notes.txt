@@ -1,0 +1,16 @@
+start
+sudo python3 modify/modify_packet.py lo
+
+disconnect xdp
+sudo ip link set dev lo xdp off
+
+start listener
+nc -ul 127.0.0.1 1234
+
+send message
+echo -n "hello" | nc -u -w1 127.0.0.1 1234
+
+--- Naive Comparison ---
+sudo python3 modify/naive_modify.py lo
+# In another terminal, send the message.
+# Observe that userspace processing is separate from the kernel stack.
