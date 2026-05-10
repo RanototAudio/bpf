@@ -47,11 +47,30 @@ int modify_packet(struct xdp_md *ctx) {
     if (payload[0] == 'h' && payload[1] == 'e' && payload[2] == 'l' && 
         payload[3] == 'l' && payload[4] == 'o') {
         
+        // incremental checksum update
+        __u32 csum = bpf_ntohs(udp->check);
+        
+        // subtract old words
+        csum -= (payload[0] << 8) | payload[1];
+        csum -= (payload[2] << 8) | payload[3];
+        csum -= (payload[4] << 8);
+
         payload[0] = 'b';
         payload[1] = 'y';
         payload[2] = 'e';
         payload[3] = ' ';
         payload[4] = ' ';
+        
+        // add new words
+        csum += (payload[0] << 8) | payload[1];
+        csum += (payload[2] << 8) | payload[3];
+        csum += (payload[4] << 8);
+
+        // fold carry bits
+        csum = (csum & 0xffff) + (csum >> 16);
+        csum = (csum & 0xffff) + (csum >> 16);
+        
+        udp->check = bpf_htons(csum & 0xffff);
         
         bpf_trace_printk("Modified hello to bye\\n");
     }
